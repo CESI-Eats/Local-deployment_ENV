@@ -1,0 +1,41 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+- host: identity_api
+  name: identity_service
+  port: 3000
+  protocol: http
+  routes:
+  - name: identity_route
+    paths:
+    - /identity
+    strip_path: true
+  - name: identity_doc_route
+    paths:
+    - /identity-doc
+    strip_path: false
+
+- host: main_bff
+  name: bff
+  port: 3000
+  protocol: http
+  routes:
+  - name: bff_route
+    paths:
+    - /
+    strip_path: true
+    plugins:
+    - name: jwt
+      enabled: true
+      config:
+        key_claim_name: kid
+        claims_to_verify:
+        - exp
+
+consumers:
+- username: identity_server
+  jwt_secrets:
+  - key: "pKtzQAeUDbhtz2wZuY2ocX6gxJ3CTWkl"
+    algorithm: HS256
+    secret: "mysecret"

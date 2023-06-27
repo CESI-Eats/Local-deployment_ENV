@@ -1,0 +1,212 @@
+version: '3'
+services:
+  kong-dbless:
+    container_name: kong-dbless
+    image: kong/kong-gateway:3.3.0.0
+    restart: always
+    volumes:
+      - ./kong:/kong/declarative/
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/kong/declarative/kong.yaml
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_ADMIN_GUI_URL=http://localhost:8002
+      - KONG_LICENSE_DATA
+    ports:
+      - 8000:8000
+      - 8443:8443
+      - 8001:8001
+      - 8444:8444
+      - 8002:8002
+      - 8445:8445
+      - 8003:8003
+      - 8004:8004
+    networks:
+      - cesi-eats-gateway
+      - cesi-eats-bff
+      - cesi-eats-identity
+
+  identity_api:
+    image: ghcr.io/cesi-eats/identity_api:dev-latest
+    restart: always
+    environment:
+      SECRET_KEY: mysecret
+      REFRESH_SECRET_KEY: myrefreshsecret
+      KID: pKtzQAeUDbhtz2wZuY2ocX6gxJ3CTWkl
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: identity_db
+      POSTGRES_HOST: postgres_db
+      POSTGRES_PORT: 5432
+      TOKEN_EXPIRATION_MINUTES: 5
+      REFRESH_TOKEN_EXPIRATION_DAYS: 30
+    depends_on:
+      - postgres_db
+    networks:
+      - cesi-eats-identity
+      - cesi-eats-postgres
+
+  account_api:
+    image: ghcr.io/cesi-eats/account_api:dev-latest
+    restart: always
+    environment:
+      DB_HOST: postgres_db
+      DB_PORT: 5432
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      DB_NAME: account_db
+      LAPINOU_URI: amqp://rabbitmq:5672
+    depends_on:
+      - postgres_db
+      - rabbitmq
+    networks:
+      - cesi-eats-account
+      - cesi-eats-postgres
+
+  payment_api:
+    image: ghcr.io/cesi-eats/payment_api:dev-latest
+    restart: always
+    environment:
+      MONGODB_URI: mongodb://mongo_db:27017/payment_db
+      LAPINOU_URI: amqp://rabbitmq:5672
+    depends_on:
+      - mongo_db
+      - rabbitmq
+    networks:
+      - cesi-eats-payment
+      - cesi-eats-mongo
+    
+  order_api:
+    image: ghcr.io/cesi-eats/order_api:dev-1.0.0
+    restart: always
+    environment:
+      MONGODB_URI: mongodb://mongo_db:27017/order_db
+      LAPINOU_URI: amqp://rabbitmq:5672
+      CESIEAT_COMMISSION: 5
+      DELIVERYMAN_COMMISSION: 5
+    depends_on:
+      - mongo_db
+      - rabbitmq
+    networks:
+      - cesi-eats-order
+      - cesi-eats-mongo
+
+  catalog_api:
+    image: ghcr.io/cesi-eats/catalog_api:dev-latest
+    restart: always
+    environment:
+      MONGODB_URI: mongodb://mongo_db:27017/catalog_db
+      LAPINOU_URI: amqp://rabbitmq:5672
+    depends_on:
+      - mongo_db
+      - rabbitmq
+    networks:
+      - cesi-eats-catalog
+      - cesi-eats-mongo
+  
+  cart_api:
+    image: ghcr.io/cesi-eats/cart_api:dev-latest
+    restart: always
+    environment:
+      MONGODB_URI: mongodb://mongo_db:27017/cart_db
+      LAPINOU_URI: amqp://rabbitmq:5672
+    depends_on:
+      - mongo_db
+      - rabbitmq
+    networks:
+      - cesi-eats-cart
+      - cesi-eats-mongo
+    
+  main_bff:
+    image: ghcr.io/cesi-eats/main_bff:dev-latest
+    restart: always
+    environment:
+      PORT: 3000
+      LAPINOU_URI: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - cesi-eats-bff
+  
+  websocket_server:
+    image: ghcr.io/cesi-eats/websocket_server:dev-latest
+    restart: always
+    environment:
+      LAPINOU_URI: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - cesi-eats-websocket
+  
+  rabbitmq:
+    image: rabbitmq:3.8.19-management
+    restart: always
+    ports:
+      - 5672:5672
+    networks:
+      - cesi-eats-bff
+      - cesi-eats-account
+      - cesi-eats-payment
+      - cesi-eats-order
+      - cesi-eats-catalog
+      - cesi-eats-cart
+      - cesi-eats-websocket
+
+  mongo_db:
+    image: mongo:5.0.0
+    restart: on-failure
+    volumes:
+      - ./mongo:/data/db
+    networks:
+      - cesi-eats-mongo
+
+  postgres_db:
+    image: postgres:13.3
+    restart: on-failure
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgres/data:/var/lib/postgresql/data
+    networks:
+      - cesi-eats-postgres
+
+networks:
+  cesi-eats-bff:
+    name: cesi-eats-bff
+    driver: bridge
+  cesi-eats-identity:
+    name: cesi-eats-identity
+    driver: bridge
+  cesi-eats-account:  
+    name: cesi-eats-account
+    driver: bridge
+  cesi-eats-payment:
+    name: cesi-eats-payment
+    driver: bridge
+  cesi-eats-order:
+    name: cesi-eats-order
+    driver: bridge
+  cesi-eats-catalog:
+    name: cesi-eats-catalog
+    driver: bridge
+  cesi-eats-cart:
+    name: cesi-eats-cart
+    driver: bridge
+  cesi-eats-websocket:
+    name: cesi-eats-websocket
+    driver: bridge
+  cesi-eats-gateway:
+    name: cesi-eats-gateway
+    driver: bridge
+  cesi-eats-postgres:
+    name: es-eats-postgres
+    driver: bridge
+  cesi-eats-mongo:
+    name: cesi-eats-mongo
+    driver: bridge

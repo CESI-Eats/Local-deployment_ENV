@@ -29,6 +29,7 @@ services:
       - cesi-eats-gateway
       - cesi-eats-bff
       - cesi-eats-identity
+      - cesi-eats-websocket
 
   identity_api:
     image: ghcr.io/cesi-eats/identity_api:dev-latest

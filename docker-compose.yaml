@@ -42,7 +42,7 @@ services:
       POSTGRES_DB: identity_db
       POSTGRES_HOST: postgres_db
       POSTGRES_PORT: 5432
-      TOKEN_EXPIRATION_MINUTES: 5
+      TOKEN_EXPIRATION_MINUTES: 20000
       REFRESH_TOKEN_EXPIRATION_DAYS: 30
     depends_on:
       - postgres_db
@@ -145,8 +145,6 @@ services:
   rabbitmq:
     image: rabbitmq:3.8.19-management
     restart: always
-    ports:
-      - 5672:5672
     networks:
       - cesi-eats-bff
       - cesi-eats-account
@@ -159,19 +157,22 @@ services:
   mongo_db:
     image: mongo:5.0.0
     restart: on-failure
+    ports:
+      - 27017:27017
     volumes:
       - ./mongo:/data/db
     networks:
       - cesi-eats-mongo
 
   postgres_db:
-    image: postgres:13.3
+    image: initialized_postgres
     restart: on-failure
+    ports:
+      - 5432:5432
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: password
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - ./postgres/data:/var/lib/postgresql/data
     networks:
       - cesi-eats-postgres

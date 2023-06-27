@@ -82,7 +82,7 @@ services:
       - cesi-eats-mongo
     
   order_api:
-    image: ghcr.io/cesi-eats/order_api:dev-1.0.0
+    image: ghcr.io/cesi-eats/order_api:dev-latest
     restart: always
     environment:
       MONGODB_URI: mongodb://mongo_db:27017/order_db
@@ -172,7 +172,9 @@ services:
       - cesi-eats-cart
 
   postgres_db:
-    image: initialized_postgres
+    build:
+        context: ./postgres
+        dockerfile: Dockerfile
     restart: on-failure
     ports:
       - 5432:5432

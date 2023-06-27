@@ -173,8 +173,8 @@ services:
 
   postgres_db:
     build:
-      context: .
-      dockerfile: Dockerfile
+        context: ./postgres
+        dockerfile: Dockerfile
     restart: on-failure
     ports:
       - 5432:5432

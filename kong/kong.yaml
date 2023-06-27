@@ -23,7 +23,7 @@ services:
   routes:
   - name: bff_route
     paths:
-    - /
+    - /bff
     strip_path: true
     plugins:
     - name: jwt

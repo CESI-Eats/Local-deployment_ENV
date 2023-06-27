@@ -163,6 +163,10 @@ services:
       - ./mongo:/data/db
     networks:
       - cesi-eats-mongo
+      - cesi-eats-payment
+      - cesi-eats-order
+      - cesi-eats-catalog
+      - cesi-eats-cart
 
   postgres_db:
     image: initialized_postgres
@@ -176,6 +180,8 @@ services:
       - ./postgres/data:/var/lib/postgresql/data
     networks:
       - cesi-eats-postgres
+      - cesi-eats-account
+      - cesi-eats-identity
 
 networks:
   cesi-eats-bff:
